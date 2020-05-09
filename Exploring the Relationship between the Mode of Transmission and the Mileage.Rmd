@@ -1,0 +1,121 @@
+---
+title: "Exploring the Relationship between the Mode of Transmission and the Mileage"
+author: "Jeevithiesh Duggani"
+date: "08/05/2020"
+output: pdf_document
+---
+```{r setup,echo=FALSE,eval=TRUE}
+    options(scipen = 10)
+```
+
+## Executive Summary
+From the dataset `mtcars`,  this project explores the relationship between the `mode of transmission` and `mileage in miles per gallon (MPG)`. The project aims to answer the following two questions.
+
+1. Is an automatic or manual transmission better for MPG
+2. Quantify the MPG difference between automatic and manual transmissions
+
+## Import libraries
+Import the necessary libraries
+```{r Import libraries,results='hide'}
+    library(ggplot2)
+```
+
+## Initialize the data
+Import the dataset `mtcars`. 
+```{r Import mtcars}
+    data("mtcars")
+```
+
+## Exploratory Data Analysis
+Consider the average `mpg` for each level of `am`.
+```{r avg mpg per level of am}
+    aggregate(mpg ~ am, mtcars, mean)
+```
+
+It can be seen from the above data frame that the `average mileage` is **better** for `manual transmission` than for `automatic transmission`.
+
+## Regression Analysis
+
+> Hypothesis : The value of mpg for manual transmission is greater than that for automatic transmission
+
+Find the `coefficients` for the `linear regression` with only `mpg` as outcome and `am` as predictor.
+```{r coefficients of linear regression}
+    fit <- lm(mpg ~ am, data = mtcars)
+    coefficients(summary(fit))
+```
+
+Find the confidence intervals for `am`.
+```{r confidence intervals}
+    confint(fit)["am",]
+```
+
+The entire `confidence interval` lies above `0` and the `p-value` (`r summary(fit)$coefficients[2,4]`) is less than `0.05`. 
+
+> Therfore the hypothesis is not to be rejected.
+
+The value of R squared is `r round(summary(fit)$r.square, 4)`, i.e. only `r paste0(round(summary(fit)$r.square*100,4),"%")` of the variance of `mpg` is caused by `am`.
+
+Perform Analysis of Variance over the data.
+```{r perform analysis of variance}
+    analyseVariance <- aov(mpg ~ ., mtcars)
+    summary(analyseVariance)
+```
+
+The terms with `p-value` less than `0.05` are `cyl`, `disp`, `wt`.
+
+Find the `linear regression` with `mpg` as outcome and `cyl`, `wt`, `disp` and `am` as predictors.
+
+```{r coefficients of multiple linear regression}
+    fitMult <- lm(mpg ~ cyl + wt + disp + am, data = mtcars)
+    coefficients(summary(fitMult))
+```
+
+The R squared is `r round(summary(fitMult)$r.square, 4)` which is sufficiently large.
+
+> The p values of cyl and wt are below 0.05, suggesting that these are the confunding values between mpg and am
+
+Identify the coefficients after removing `disp` as a predictor
+```{r coefficients of final linear regression}
+    fitFin <- lm(mpg ~ cyl + wt + am, data = mtcars)
+    coefficients(summary(fitFin))
+```
+
+The `coefficient` for `am` is `0.1765`.
+
+> The value of mpg increases by 0.1765 when the mode of transmission changes from automatic to manual.
+
+## Appendix
+Plot the graph between `mpg` and `am`
+```{r plot graph mpg vs am}
+    mtcars$am <- as.factor(mtcars$am)
+    levels(mtcars$am) <- c("Automatic", "Manual")
+    graph <- ggplot(mtcars, aes(x = factor(am), y = mpg))
+    graph <- graph + geom_boxplot(aes(fill = factor(am)))
+    graph <- graph + labs(title = "MPG for each Transmission", 
+                          x = "Transmission", y = "Mileage")
+    graph
+```
+
+From the above analysis, it can be initially observed that `manual transmission` is indeed **better** for `mileage`.
+
+Plot for fit.
+```{r plot graph for fit}
+    par(mfrow = c(2,2))
+    plot(fit)
+```
+
+plot for fitMult.
+```{r plot graph for fitMult}
+    par(mfrow = c(2,2))
+    plot(fitMult)
+```
+
+plot for fitFin.
+```{r plot graph for fitFin}
+    par(mfrow = c(2,2))
+    plot(fitFin)
+```
+
+The `residuals vs fitted` graphs of `fitMult` and `fitFin` are very similar, indicating that the chosen confunding variables are the only confounding variables.
+
+                                    **End**
